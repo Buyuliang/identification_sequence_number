@@ -115,12 +115,12 @@ class UIComponents:
 
     # 获取输入框中的文本内容
     def get_vendor(self):
-        """ 获取 SN 输入框内容 """
+        """ 获取 vendor 输入框内容 """
         return self.vendor_input.get()
 
     # 获取输入框中的文本内容
     def get_model(self):
-        """ 获取 SN 输入框内容 """
+        """ 获取 model 输入框内容 """
         return self.model_input.get()
 
     # 获取输入框中的文本内容
@@ -140,28 +140,114 @@ class UIComponents:
     def set_editable_checkbutton(self, state):
         self.edit_vendor_model.set(state)
 
-    # 更新识别结果文本框内容
-    def update_result_text(self, text):
+    # 清除识别结果文本框内容
+    def clear_result_text(self):
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, text)
 
     # 清空日志输出
     def clear_log_text(self):
         self.log_text.delete(1.0, tk.END)
 
-    # 追加日志输出
-    def append_log_text(self, text):
-        self.log_text.insert(tk.END, text + "\n")
+    # 更新识别结果文本框内容
+    def update_result_text(self, text, font_size=12, font_color="black"):
+        """
+        更新结果文本，并设置字体大小和颜色。
 
-    # 更新状态文本框内容
-    def update_log_text(self, text):
-        self.log_text.delete(1.0, tk.END)
-        self.log_text.insert(tk.END, text)
+        :param text: 要显示的文本内容
+        :param font_size: 字体大小，默认为 12
+        :param font_color: 字体颜色，默认为黑色
+        """
+        # 删除当前文本
+        self.result_text.delete(1.0, tk.END)
 
-    # 更新状态文本框内容
-    def update_status_text(self, text):
+        # 为每次插入文本创建一个唯一的标签
+        tag_name = f"custom_style_{font_color}_{font_size}"
+
+        # 配置新的标签样式
+        self.result_text.tag_configure(tag_name, font=("Arial", font_size), foreground=font_color)
+
+        # 插入新文本并应用样式
+        self.result_text.insert(tk.END, text, tag_name)
+
+    # 追加日志输出并设置颜色和大小
+    def append_log_text(self, text, font_size=10, font_color="black"):
+        """
+        追加日志文本，并设置字体大小和颜色。
+
+        :param text: 要显示的日志内容
+        :param font_size: 字体大小，默认为 10
+        :param font_color: 字体颜色，默认为黑色
+        """
+        # 为每次插入文本创建一个唯一的标签
+        tag_name = f"custom_style_{font_color}_{font_size}"
+
+        # 配置新的标签样式
+        self.log_text.tag_configure(tag_name, font=("Arial", font_size), foreground=font_color)
+
+        # 追加文本并应用样式
+        self.log_text.insert(tk.END, text + "\n", tag_name)
+
+
+    # 更新状态文本框内容并设置颜色和大小
+    def update_status_text(self, text, font_size=10, font_color="black"):
+        """
+        更新状态文本，并设置字体大小和颜色。
+
+        :param text: 要显示的状态内容
+        :param font_size: 字体大小，默认为 10
+        :param font_color: 字体颜色，默认为黑色
+        """
         self.status_text.delete(1.0, tk.END)
-        self.status_text.insert(tk.END, text)
+
+        # 为每次插入文本创建一个唯一的标签
+        tag_name = f"custom_style_{font_color}_{font_size}"
+
+        # 配置新的标签样式
+        self.status_text.tag_configure(tag_name, font=("Arial", font_size), foreground=font_color)
+
+        # 插入文本并应用样式
+        self.status_text.insert(tk.END, text, tag_name)
+
+    # 追加状态文本框内容
+    def append_status_text(self, text, font_size=16, font_color="black"):
+        """
+        更新状态文本，并设置字体大小和颜色。
+
+        :param text: 要显示的文本内容
+        :param font_size: 字体大小，默认为 12
+        :param font_color: 字体颜色，默认为黑色
+        """
+        # 为每次插入文本创建一个唯一的标签
+        tag_name = f"custom_style_{font_color}_{font_size}"
+
+        # 配置新的标签样式
+        self.status_text.tag_configure(tag_name, font=("Arial", font_size), foreground=font_color)
+
+        text = text + "\n"
+        # 插入新文本并应用样式
+        self.status_text.insert(tk.END, text, tag_name)
+
+    # 更新日志文本框内容并设置字体大小和颜色
+    def update_log_text(self, text, font_size=10, font_color="black"):
+        """
+        更新日志文本框内容，并设置字体大小和颜色。
+
+        :param text: 要显示的日志内容
+        :param font_size: 字体大小，默认为 10
+        :param font_color: 字体颜色，默认为黑色
+        """
+        # 删除当前文本
+        self.log_text.delete(1.0, tk.END)
+
+        # 为每次插入文本创建一个唯一的标签
+        tag_name = f"custom_style_{font_color}_{font_size}"
+
+        # 配置新的标签样式
+        self.log_text.tag_configure(tag_name, font=("Arial", font_size), foreground=font_color)
+
+        # 插入新文本并应用样式
+        self.log_text.insert(tk.END, text, tag_name)
+
 
     # 获取自动检测复选框状态
     def get_auto_detect_state(self):
