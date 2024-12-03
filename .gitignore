@@ -1,0 +1,48 @@
+# 忽略 Python 编译文件
+*.pyc
+*.pyo
+__pycache__/
+
+# 忽略虚拟环境
+venv/
+env/
+.venv/
+
+# 忽略 Jupyter Notebook 文件
+.ipynb_checkpoints/
+
+# 忽略操作系统生成的文件（例如 macOS、Windows）
+.DS_Store
+Thumbs.db
+
+# 忽略日志文件
+*.log
+
+# 忽略 IDE 配置文件
+.idea/
+.vscode/
+
+# 忽略其他临时文件
+*.swp
+*.swo
+
+# 忽略压缩文件
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+
+# 忽略数据库文件
+*.sqlite3
+
+# 忽略 Docker 配置文件
+docker-compose.override.yml
+
+
+
+*.csv
+*.tmp
+*.txt
+pic
+
+build
