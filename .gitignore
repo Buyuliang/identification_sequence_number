@@ -42,7 +42,7 @@ docker-compose.override.yml
 
 *.csv
 *.tmp
-*.txt
+text.txt
 pic
 
 build

@@ -59,7 +59,22 @@ MainWindow::MainWindow(QWidget *parent)
     // Device selection dropdown
     deviceVar = new QComboBox(this);
     deviceVar->addItem("选择设备");
-    deviceVar->setStyleSheet("background-color: white;");
+    // deviceVar->setStyleSheet("background-color: white;");
+    deviceVar->setStyleSheet(
+        "QComboBox {"
+        "   background-color: white;"
+        "}"
+        "QComboBox::item {"
+        "   background-color: white;"
+        "}"
+        "QComboBox::item:hover {"
+        "   background-color: lightblue;"  // 悬停时的背景色
+        "}"
+        "QComboBox::item:selected {"
+        "   background-color: lightgreen;"  // 选中时的背景色
+        "}"
+    );
+
     connect(deviceVar, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDeviceSelected);
     leftColumnFrame->addWidget(deviceVar);
 
@@ -200,15 +215,30 @@ void MainWindow::setDetectorButtonDisable()
 
 void MainWindow::updateDeviceList()
 {
-    deviceVar->clear();  // 清空现有列表
+    // 获取当前选中的设备
+    QString currentDevice = deviceVar->currentText();
+
+    // 清空现有列表
+    deviceVar->clear();
     deviceVar->addItem("选择设备");
 
+    // 获取设备列表
     QStringList devices = deviceManager->refreshDeviceList();
+
+    // 如果设备列表为空，添加提示信息
     if (devices.isEmpty()) {
         deviceVar->addItem("无可用设备");
     } else {
         for (const QString &device : devices) {
             deviceVar->addItem(device);
+        }
+    }
+
+    // 如果当前设备仍然在设备列表中，保持当前设备选中
+    if (devices.contains(currentDevice)) {
+        int currentIndex = deviceVar->findText(currentDevice);
+        if (currentIndex != -1) {
+            deviceVar->setCurrentIndex(currentIndex);
         }
     }
 }
