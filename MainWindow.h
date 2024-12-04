@@ -17,9 +17,12 @@
 #include <QImage>
 #include <QPixmap>
 
-#include "DeviceManager.h"  // 添加头文件
+#include "Detection.h"
+#include "CameraThread.h"
+#include "DeviceManager.h"
 
 class CameraThread;
+class Detection;
 
 class MainWindow : public QMainWindow
 {
@@ -51,6 +54,8 @@ private:
     // Camera thread
     CameraThread *cameraThread;
 
+    Detection *detection;
+
     // Mutex for thread safety
     QMutex mutex;
 
@@ -63,9 +68,10 @@ private:
 
 private slots:
     void toggleVendorModel();
-    void setDetectorButtonDisable();
+    void onAutoStartDetection();
     void updateDeviceList();  // 更新设备列表
     void onDeviceSelected(int index);
+    void onStartDetection();
 };
 
 #endif // MAINWINDOW_H

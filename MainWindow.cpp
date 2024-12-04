@@ -1,6 +1,4 @@
 #include "MainWindow.h"
-#include "CameraThread.h"
-#include "DeviceManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -17,6 +15,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       deviceManager(new DeviceManager()),  // 初始化 DeviceManager
+      detection(new Detection()),            // 初始化 Detection 类
       currentDevice("")  // 初始化当前设备为空
 {
     setWindowTitle("UI Components");
@@ -75,12 +74,10 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
     );
 
-    connect(deviceVar, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDeviceSelected);
     leftColumnFrame->addWidget(deviceVar);
 
     // Refresh device button
     QPushButton *refreshButton = new QPushButton("刷新设备", this);
-    connect(refreshButton, &QPushButton::clicked, this, &MainWindow::updateDeviceList);
     leftColumnFrame->addWidget(refreshButton);
 
     // SN input field
@@ -154,6 +151,18 @@ MainWindow::MainWindow(QWidget *parent)
     rightColumnFrame->addWidget(logLabel);
     rightColumnFrame->addWidget(logText);
 
+    // Signal-slot connections
+    connect(deviceVar, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDeviceSelected);
+    connect(refreshButton, &QPushButton::clicked, this, &MainWindow::updateDeviceList);
+    connect(startButton, &QPushButton::clicked, this, &MainWindow::onStartDetection);
+    connect(editVendorModel, &QCheckBox::stateChanged, this, &MainWindow::toggleVendorModel);
+    connect(autoDetect, &QCheckBox::stateChanged, this, &MainWindow::onAutoStartDetection);
+
+    // Connect signals from Detection class
+    connect(detection, &Detection::updateResultTextSignal, this, &MainWindow::updateResultText);
+    connect(detection, &Detection::appendLogTextSignal, this, &MainWindow::appendLogText);
+    connect(detection, &Detection::updateStatusTextSignal, this, &MainWindow::updateStatusText);
+
     // Initialize CameraThread
     cameraThread = new CameraThread();
     connect(cameraThread, &CameraThread::newFrameSignal, this, &MainWindow::updateVideoFrame);
@@ -204,12 +213,23 @@ void MainWindow::toggleVendorModel()
     }
 }
 
-void MainWindow::setDetectorButtonDisable()
+void MainWindow::onAutoStartDetection()
 {
     if (autoDetect->isChecked()) {
+        // 获取 SN、Vendor、Model 等输入
+        QString sn = snInput->text();
+        QString vendor = vendorInput->text();
+        QString model = modelInput->text();
+        QString devicePath = currentDevice;
         startButton->setDisabled(true);
+        vendorInput->setDisabled(true);
+        modelInput->setDisabled(true);
+
+        // 启动检测
+        detection->autoStartDetection(sn, vendor, model, devicePath);
     } else {
         startButton->setEnabled(true);
+        detection->stopAutoDetection();
     }
 }
 
@@ -255,4 +275,17 @@ void MainWindow::onDeviceSelected(int index)
     // 更新摄像头显示或切换设备
     cameraThread->setDevice(currentDevice);
 }
+
+void MainWindow::onStartDetection()
+{
+    // 获取 SN、Vendor、Model 等输入
+    QString sn = snInput->text();
+    QString vendor = vendorInput->text();
+    QString model = modelInput->text();
+    QString devicePath = currentDevice;  // 使用当前选中的设备路径
+
+    // 启动检测
+    detection->startDetection(sn, vendor, model, devicePath);
+}
+
 

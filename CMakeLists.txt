@@ -14,6 +14,8 @@ set(SOURCES
     MainWindow.cpp
     CameraThread.cpp
     DeviceManager.cpp
+    Detection.cpp
+    LogManager.cpp
 )
 
 # 需要将头文件也加入
@@ -21,10 +23,12 @@ set(HEADERS
     MainWindow.h
     CameraThread.h
     DeviceManager.h
+    Detection.h
+    LogManager.h
 )
 
 # 将 Qt 元对象编译文件加到源列表中
-qt5_wrap_cpp(MOC_SOURCES MainWindow.h CameraThread.h)
+qt5_wrap_cpp(MOC_SOURCES MainWindow.h CameraThread.h DeviceManager.h Detection.h LogManager.h)
 
 # 定义最终的可执行文件
 add_executable(CameraApp ${SOURCES} ${MOC_SOURCES})

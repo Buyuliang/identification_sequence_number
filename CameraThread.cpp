@@ -20,6 +20,7 @@ void CameraThread::run()
     // 使用设备路径来初始化摄像头
     cv::VideoCapture cap(devicePath.toStdString());  // 使用设备路径来打开摄像头
     if (!cap.isOpened()) {
+        devicePath.clear();  // 设置 devicePath 为空
         emit errorSignal("无法打开摄像头！");  // 如果设备路径无效，发送错误信号
         return;
     }
