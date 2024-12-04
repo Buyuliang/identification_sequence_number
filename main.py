@@ -4,7 +4,8 @@ from device_manager import DeviceManager
 from ui_components import UIComponents
 from detector import Detection  # 导入 Detection 类
 from log_manager import LogManager
-
+import gc
+    
 class AIApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -78,6 +79,11 @@ class AIApp(tk.Tk):
         if device:
             self.detection.auto_start_detection(device)
 
+def run_gc():
+    gc.collect()  # 触发垃圾回收
+    app.after(60000, run_gc)  # 每 60 秒触发一次
+
 if __name__ == "__main__":
     app = AIApp()
+    app.after(60000, run_gc)
     app.mainloop()

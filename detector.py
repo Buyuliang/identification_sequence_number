@@ -86,11 +86,12 @@ class Detection:
             if not os.path.exists(directory):
                 os.makedirs(directory)
             cv2.imwrite(absolute_image_path, frame)
-            
+
+            if os.path.isfile("text.txt"):
+                os.remove("text.txt")
             # 执行 shell 命令开始检测
             os.environ["LD_LIBRARY_PATH"] = "./lib"  # 修改为你的 lib 路径
-            # command = ["./rknn_ppocr_system_demo", "model/ppocrv4_det.rknn", "model/ppocrv4_rec.rknn", image_path]
-            command = ["echo", image_path]
+            command = ["./rknn_ppocr_system_demo", "model/ppocrv4_det.rknn", "model/ppocrv4_rec.rknn", image_path]
             try:
                 result = subprocess.run(command, capture_output=True, text=True, check=True)
                 self.ui.update_log_text(f"检测结果:\n{result.stdout}\n")
@@ -194,4 +195,4 @@ class Detection:
         """ 子线程任务: 持续执行检测 """
         while self.ui.get_auto_detect_state():
             self._start_detection(device)
-            sleep(1)
+            # sleep(1)

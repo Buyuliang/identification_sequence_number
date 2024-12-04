@@ -19,6 +19,6 @@ while true; do
   random_string=$(generate_random_string)
   # 使用 xdotool 输入字符串
   xdotool type "$random_string"
-  # 每隔 2 秒输入一次
-  sleep 2
+  # 每隔 3 秒输入一次
+  sleep 3
 done

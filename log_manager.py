@@ -19,7 +19,7 @@ class LogManager:
             # 构建上传命令
             command = f"ossutil cp -f {local_file_path} {oss_path}"
             result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print("Upload successful")
+            # print("Upload successful")
             return True  # 上传成功
 
         except subprocess.CalledProcessError as e:
@@ -39,7 +39,7 @@ class LogManager:
             # 构建下载命令
             command = f"ossutil cp -f {oss_path} {local_file_path}"
             result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print("Download successful")
+            # print("Download successful")
             return True  # 下载成功
 
         except subprocess.CalledProcessError as e:

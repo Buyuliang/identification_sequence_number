@@ -36,7 +36,7 @@ class CameraHandler:
                 self.update_video_frame(frame)
             else:
                 break
-            sleep(0.03)  # 控制帧率，大约每秒30帧
+            # sleep(0.03)  # 控制帧率，大约每秒30帧
 
     def update_video_frame(self, frame):
         """ 更新视频流并保存当前帧 """
