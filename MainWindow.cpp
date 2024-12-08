@@ -15,7 +15,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       deviceManager(new DeviceManager()),  // 初始化 DeviceManager
-      detection(new Detection()),            // 初始化 Detection 类
+    //   detection(new Detection()),            // 初始化 Detection 类
       currentDevice("")  // 初始化当前设备为空
 {
     setWindowTitle("UI Components");
@@ -151,6 +151,12 @@ MainWindow::MainWindow(QWidget *parent)
     rightColumnFrame->addWidget(logLabel);
     rightColumnFrame->addWidget(logText);
 
+    // Initialize CameraThread
+    cameraThread = new CameraThread();
+    connect(cameraThread, &CameraThread::newFrameSignal, this, &MainWindow::updateVideoFrame);
+    cameraThread->start();
+
+    detection = new Detection(cameraThread);
     // Signal-slot connections
     connect(deviceVar, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDeviceSelected);
     connect(refreshButton, &QPushButton::clicked, this, &MainWindow::updateDeviceList);
@@ -162,11 +168,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(detection, &Detection::updateResultTextSignal, this, &MainWindow::updateResultText);
     connect(detection, &Detection::appendLogTextSignal, this, &MainWindow::appendLogText);
     connect(detection, &Detection::updateStatusTextSignal, this, &MainWindow::updateStatusText);
-
-    // Initialize CameraThread
-    cameraThread = new CameraThread();
-    connect(cameraThread, &CameraThread::newFrameSignal, this, &MainWindow::updateVideoFrame);
-    cameraThread->start();
 
     // Populate device list
     updateDeviceList();

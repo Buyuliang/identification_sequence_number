@@ -29,7 +29,13 @@ void CameraThread::run()
         cv::Mat frame;
         cap >> frame;
         if (frame.empty()) {
-            break;  // 如果读取的帧为空，跳出循环
+            break;
+        }
+
+        // 锁定帧共享资源
+        {
+            QMutexLocker locker(&frameMutex);
+            currentFrame = frame.clone();  // 保存当前帧
         }
 
         // 转换为RGB格式以便显示
@@ -50,14 +56,14 @@ void CameraThread::stop()
 
 void CameraThread::setDevice(const QString &devicePath)
 {
-    // 保存设备路径
     this->devicePath = devicePath;
-
-    // 停止当前线程
-    isRunning = false;
-    wait();
-
-    // 重启线程
+    stop();
     isRunning = true;
-    start();  // 重新启动线程并加载新设备
+    start();
+}
+
+cv::Mat CameraThread::captureFrame()
+{
+    QMutexLocker locker(&frameMutex);  // 锁定帧资源
+    return currentFrame.clone();
 }

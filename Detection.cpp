@@ -1,11 +1,20 @@
 #include "Detection.h"
 #include <iostream>
 #include <chrono>
-#include <thread>
+#include <QDateTime>
+#include <QDebug>
+#include <QFile>
 
-DetectionWorker::DetectionWorker(const QString &sn, const QString &vendor, const QString &model, const QString &devicePath)
-    : sn(sn), vendor(vendor), model(model), devicePath(devicePath)
+DetectionWorker::DetectionWorker(CameraThread *cameraThread, const QString &sn, const QString &vendor, const QString &model, const QString &devicePath)
+    : cameraThread(cameraThread), sn(sn), vendor(vendor), model(model), devicePath(devicePath)
 {
+
+}
+
+cv::Mat DetectionWorker::getCurrentFrame()
+{
+    // 获取当前摄像头帧
+    return cameraThread->captureFrame();
 }
 
 void DetectionWorker::run()
@@ -17,17 +26,17 @@ void DetectionWorker::run()
     // 上传文件到 OSS
     bool uploadSuccess = logManager.uploadFile("/path/to/local/file.txt", "oss://bucket/path/to/oss/file.txt");
     if (uploadSuccess) {
-        qDebug() << "File uploaded successfully!";
+        emit appendLogTextSignal("File uploaded successfully!");
     } else {
-        qDebug() << "File upload failed!";
+        emit appendLogTextSignal("File upload failed!");
     }
 
     // 从 OSS 下载文件
     bool downloadSuccess = logManager.downloadFile("oss://bucket/path/to/oss/file.txt", "/path/to/local/file.txt");
     if (downloadSuccess) {
-        qDebug() << "File downloaded successfully!";
+        emit appendLogTextSignal("File downloaded successfully!");
     } else {
-        qDebug() << "File download failed!";
+        emit appendLogTextSignal("File download failed!");
     }
 
     emit updateResultTextSignal("Detection finished");
@@ -36,11 +45,59 @@ void DetectionWorker::run()
     emit appendLogTextSignal("Detection log");
     emit appendLogTextSignal("Detection log");
     emit updateStatusTextSignal("Status updated");
+
+    // 获取当前时间戳作为文件名
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    QString imagePath = sn + "_" + timestamp + ".jpg";
+
+    // 使用 OpenCV 保存图像
+    cv::Mat image = getCurrentFrame();
+    if (!image.empty()) {
+        cv::imwrite(imagePath.toStdString(), image);
+        emit appendLogTextSignal("Saved image to: " + imagePath);
+    } else {
+        emit appendLogTextSignal("Image is NULL!");
+    }
+
+    QList<QList<QString>> results;  // 存储符合条件的数据
+
+    // 显示 OCR 结果
+    QString filePath = "text.txt";  // 文件路径
+    QFile file(filePath);
+
+    if (file.exists()) {
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+                QString line = in.readLine();
+                // 去掉行首尾的空白字符
+                QString cleanedLine = line.simplified();
+
+                // 检查是否以 vendor 开头并以 model 结尾
+                if (cleanedLine.startsWith(vendor) && cleanedLine.endsWith(model)) {
+                    // 保存数据到列表
+                    QList<QString> result;
+                    result.append(sn);
+                    result.append(vendor);
+                    result.append(model);
+                    result.append(timestamp);
+                    results.append(result);
+                }
+            }
+            file.close();
+        } else {
+            qDebug() << "无法打开文件:" << filePath;
+        }
+    } else {
+        qDebug() << "文件不存在:" << filePath;
+    }
+
 }
 
-Detection::Detection(QObject *parent)
-    : QObject(parent), worker(nullptr), autoDetectState(false)
+Detection::Detection(CameraThread *camerathread, QObject *parent)  // No default argument here
+    : QObject(parent), worker(nullptr), autoDetectState(false), cameraThread(camerathread)
 {
+
 }
 
 Detection::~Detection()
@@ -56,7 +113,7 @@ Detection::~Detection()
 
 void Detection::startDetection(const QString &sn, const QString &vendor, const QString &model, const QString &devicePath)
 {
-    worker = new DetectionWorker(sn, vendor, model, devicePath);
+    worker = new DetectionWorker(cameraThread, sn, vendor, model, devicePath);
     
     // 连接信号和槽
     connect(worker, &DetectionWorker::updateResultTextSignal, this, &Detection::updateResultTextSignal);

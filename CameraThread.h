@@ -5,6 +5,8 @@
 #include <QString>
 #include <QPixmap>
 #include <opencv2/opencv.hpp>  // Assuming you're using OpenCV
+#include <QMutex>
+#include <QMutexLocker> 
 
 class CameraThread : public QThread
 {
@@ -16,6 +18,7 @@ public:
 
     // 设置摄像头设备路径
     void setDevice(const QString &devicePath);
+    cv::Mat captureFrame();
 
 signals:
     // 发射新帧信号，将 pixmap 传递给 UI
@@ -36,6 +39,8 @@ protected:
 private:
     QString devicePath;  // 摄像头设备路径
     bool isRunning;      // 线程运行状态
+    QMutex frameMutex;
+    cv::Mat currentFrame;
 };
 
 #endif // CAMERATHREAD_H
