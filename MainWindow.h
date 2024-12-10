@@ -70,11 +70,12 @@ private:
     void clearfile();
 
 private slots:
-    void toggleVendorModel();
+    void toggleVendorModel(int state);
     void onAutoStartDetection();
     void updateDeviceList();  // 更新设备列表
     void onDeviceSelected(int index);
     void onStartDetection();
+    void clearSNInput();
 };
 
 #endif // MAINWINDOW_H

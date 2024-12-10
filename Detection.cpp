@@ -240,10 +240,12 @@ void DetectionWorker::run()
 
 failout:
     emit updateResultTextSignal("FAILL", Qt::red, 24);
+    emit clearSNInputSignal();
     return;
 
 passout:
     emit updateResultTextSignal("PASS", Qt::green, 24);
+    emit clearSNInputSignal();
 }
 
 Detection::Detection(CameraThread *camerathread, QObject *parent)  // No default argument here
@@ -274,6 +276,7 @@ void Detection::startDetection()
     connect(worker, &DetectionWorker::appendLogTextSignal, this, &Detection::appendLogTextSignal);
     connect(worker, &DetectionWorker::updateStatusTextSignal, this, &Detection::updateStatusTextSignal);
     connect(worker, &DetectionWorker::updateSNTextSignal, this, &Detection::updateSNTextSignal);
+    connect(worker, &DetectionWorker::clearSNInputSignal, this, &Detection::clearSNInputSignal);
     
     // 启动检测线程
     worker->start();

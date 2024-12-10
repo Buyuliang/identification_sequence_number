@@ -34,6 +34,7 @@ signals:
     void appendLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 日志文本信号
     void updateStatusTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新状态文本信号
     void updateSNTextSignal();
+    void clearSNInputSignal();
 };
 
 class Detection : public QObject
@@ -60,6 +61,7 @@ signals:
     void appendLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 日志输出
     void updateStatusTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新状态文本
     void updateSNTextSignal();
+    void clearSNInputSignal();
 
 private:
     DetectionWorker *worker; // 后台线程对象

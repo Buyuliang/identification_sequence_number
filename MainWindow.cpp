@@ -171,6 +171,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(detection, &Detection::appendLogTextSignal, this, &MainWindow::appendLogText);
     connect(detection, &Detection::updateStatusTextSignal, this, &MainWindow::updateStatusText);
     connect(detection, &Detection::updateSNTextSignal, this, &MainWindow::updateSNText);
+    connect(detection, &Detection::clearSNInputSignal, this, &MainWindow::clearSNInput);
 
     // Populate device list
     updateDeviceList();
@@ -248,15 +249,23 @@ void MainWindow::updateVideoFrame(const QPixmap &pixmap)
     videoLabel->setPixmap(pixmap);
 }
 
-void MainWindow::toggleVendorModel()
+// void MainWindow::toggleVendorModel()
+// {
+//     if (editVendorModel->isChecked()) {
+//         vendorInput->setEnabled(true);
+//         modelInput->setEnabled(true);
+//     } else {
+//         vendorInput->setDisabled(true);
+//         modelInput->setDisabled(true);
+//     }
+// }
+
+void MainWindow::toggleVendorModel(int state)
 {
-    if (editVendorModel->isChecked()) {
-        vendorInput->setEnabled(true);
-        modelInput->setEnabled(true);
-    } else {
-        vendorInput->setDisabled(true);
-        modelInput->setDisabled(true);
-    }
+    // 如果 editVendorModel 被选中，启用 vendorInput 和 modelInput
+    bool enableFields = (state == Qt::Checked) && !autoDetect->isChecked();
+    vendorInput->setEnabled(enableFields);
+    modelInput->setEnabled(enableFields);
 }
 
 void MainWindow::onAutoStartDetection()
@@ -316,13 +325,9 @@ void MainWindow::onDeviceSelected(int index)
 
 void MainWindow::onStartDetection()
 {
-    // 获取 SN、Vendor、Model 等输入
-    QString sn = snInput->text();
-    QString vendor = vendorInput->text();
-    QString model = modelInput->text();
-    QString devicePath = currentDevice;  // 使用当前选中的设备路径
-
     // 启动检测
+    vendorInput->setDisabled(true);
+    modelInput->setDisabled(true);
     detection->startDetection();
 }
 
@@ -334,4 +339,7 @@ void MainWindow::clearfile()
     }
 }
 
-
+void MainWindow::clearSNInput() {
+    snInput->clear();          // 清除文本框内容
+    snInput->setFocus();       // 设置光标到该文本框
+}
