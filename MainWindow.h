@@ -60,11 +60,14 @@ private:
     QMutex mutex;
 
     // Private methods to update UI
-    void updateResultText(const QString &text);
-    void appendLogText(const QString &text);
-    void updateStatusText(const QString &text);
+    void updateResultText(const QString &text, const QColor &color = Qt::black, int fontSize = 24);
+    void updateLogText(const QString &text, const QColor &color = Qt::black, int fontSize = 24);
+    void appendLogText(const QString &text, const QColor &color = Qt::black, int fontSize = 12);
+    void updateStatusText(const QString &text, const QColor &color = Qt::black, int fontSize = 12);
     void updateVideoFrame(const QPixmap &pixmap);
     void populateDeviceList();  // 填充设备列表
+    void updateSNText();
+    void clearfile();
 
 private slots:
     void toggleVendorModel();

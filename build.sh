@@ -1,4 +1,5 @@
 mkdir build
 cd build
 cmake ..
-make
+make -j1
+make install

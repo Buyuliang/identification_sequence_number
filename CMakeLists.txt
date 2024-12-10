@@ -35,3 +35,11 @@ add_executable(CameraApp ${SOURCES} ${MOC_SOURCES})
 
 # 链接 Qt 和 OpenCV 库
 target_link_libraries(CameraApp Qt5::Core Qt5::Widgets ${OpenCV_LIBS})
+
+# 安装可执行文件到当前目录下的 install 目录
+install(TARGETS CameraApp DESTINATION ${CMAKE_BINARY_DIR}/install)
+install(FILES ${CMAKE_SOURCE_DIR}/rknn_ppocr_system_demo 
+        DESTINATION ${CMAKE_BINARY_DIR}/install
+        PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/lib DESTINATION ${CMAKE_BINARY_DIR}/install)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/model DESTINATION ${CMAKE_BINARY_DIR}/install)

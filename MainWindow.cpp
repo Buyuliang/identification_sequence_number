@@ -11,6 +11,7 @@
 #include <QFrame>
 #include <QPixmap>
 #include <QDebug>
+#include <QFile>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -166,11 +167,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Connect signals from Detection class
     connect(detection, &Detection::updateResultTextSignal, this, &MainWindow::updateResultText);
+    connect(detection, &Detection::updateLogTextSignal, this, &MainWindow::updateLogText);
     connect(detection, &Detection::appendLogTextSignal, this, &MainWindow::appendLogText);
     connect(detection, &Detection::updateStatusTextSignal, this, &MainWindow::updateStatusText);
+    connect(detection, &Detection::updateSNTextSignal, this, &MainWindow::updateSNText);
 
     // Populate device list
     updateDeviceList();
+    clearfile();
 }
 
 MainWindow::~MainWindow()
@@ -180,22 +184,63 @@ MainWindow::~MainWindow()
     delete deviceManager;  // 清理 DeviceManager
 }
 
-void MainWindow::updateResultText(const QString &text)
+void MainWindow::updateResultText(const QString &text, const QColor &color, int fontSize)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutex);  // 线程锁，确保线程安全
+    resultText->clear();
+    // 获取 QTextEdit 当前的文本格式
+    QTextCharFormat format;
+    format.setForeground(QBrush(color));           // 设置字体颜色
+    format.setFontPointSize(fontSize);             // 设置字体大小
+
+    // 将格式应用到 QTextEdit
+    resultText->setCurrentCharFormat(format);
+
+    // 插入文本并保持光标位置不变
     resultText->append(text);
 }
 
-void MainWindow::appendLogText(const QString &text)
+void MainWindow::updateLogText(const QString &text, const QColor &color, int fontSize)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutex);  // 线程锁，确保线程安全
+    logText->clear();
+    QTextCharFormat format;
+    format.setForeground(QBrush(color));           // 设置字体颜色
+    format.setFontPointSize(fontSize);             // 设置字体大小
+    logText->setCurrentCharFormat(format);
     logText->append(text);
 }
 
-void MainWindow::updateStatusText(const QString &text)
+void MainWindow::appendLogText(const QString &text, const QColor &color, int fontSize)
+{
+    QMutexLocker locker(&mutex);  // 线程锁，确保线程安全
+
+    // 获取 QTextEdit 当前的文本格式
+    QTextCharFormat format;
+    format.setForeground(QBrush(color));           // 设置字体颜色
+    format.setFontPointSize(fontSize);             // 设置字体大小
+    logText->setCurrentCharFormat(format);
+    logText->append(text);
+}
+
+void MainWindow::updateStatusText(const QString &text, const QColor &color, int fontSize)
+{
+    QMutexLocker locker(&mutex);  // 线程锁，确保线程安全
+    statusText->clear();
+    // 获取 QTextEdit 当前的文本格式
+    QTextCharFormat format;
+    format.setForeground(QBrush(color));           // 设置字体颜色
+    format.setFontPointSize(fontSize);             // 设置字体大小
+    statusText->setCurrentCharFormat(format);
+    statusText->append(text);
+}
+
+void MainWindow::updateSNText()
 {
     QMutexLocker locker(&mutex);
-    statusText->append(text);
+    detection->sn = snInput->text();
+    detection->vendor = vendorInput->text();
+    detection->model = modelInput->text();
 }
 
 void MainWindow::updateVideoFrame(const QPixmap &pixmap)
@@ -227,7 +272,7 @@ void MainWindow::onAutoStartDetection()
         modelInput->setDisabled(true);
 
         // 启动检测
-        detection->autoStartDetection(sn, vendor, model, devicePath);
+        detection->autoStartDetection();
     } else {
         startButton->setEnabled(true);
         detection->stopAutoDetection();
@@ -254,14 +299,6 @@ void MainWindow::updateDeviceList()
             deviceVar->addItem(device);
         }
     }
-
-    // 如果当前设备仍然在设备列表中，保持当前设备选中
-    if (devices.contains(currentDevice)) {
-        int currentIndex = deviceVar->findText(currentDevice);
-        if (currentIndex != -1) {
-            deviceVar->setCurrentIndex(currentIndex);
-        }
-    }
 }
 
 void MainWindow::onDeviceSelected(int index)
@@ -286,7 +323,15 @@ void MainWindow::onStartDetection()
     QString devicePath = currentDevice;  // 使用当前选中的设备路径
 
     // 启动检测
-    detection->startDetection(sn, vendor, model, devicePath);
+    detection->startDetection();
+}
+
+void MainWindow::clearfile()
+{
+    QFile file("vendor_model_data.txt");
+    if (file.exists()) {
+        file.remove();
+    }
 }
 
 

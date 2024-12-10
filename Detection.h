@@ -14,22 +14,26 @@ class DetectionWorker : public QThread
     Q_OBJECT
 
 public:
-    DetectionWorker(CameraThread *cameraThread, const QString &sn, const QString &vendor, const QString &model, const QString &devicePath);
-    // explicit DetectionWorker(CameraThread *cameraThread, const QString &sn, const QString &vendor, const QString &model, const QString &devicePath, QObject *parent = nullptr);
+    DetectionWorker(CameraThread *cameraThread, QString sn, QString vendor, QString model);
+    void updateStatusWithVendorModelCount();
+    void loadVendorModelData();
+    void saveVendorModelData();
     void run() override;
     cv::Mat getCurrentFrame();
 
-signals:
-    void updateResultTextSignal(const QString &text);   // 更新结果文本信号
-    void appendLogTextSignal(const QString &text);      // 日志文本信号
-    void updateStatusTextSignal(const QString &text);   // 更新状态文本信号
-
-private:
+    QMap<QString, int> vendorModelMap;  // 保存 vendor + model 拼接后的出现次数
     CameraThread *cameraThread;  // 摄像头线程
     QString sn;           // 设备序列号
     QString vendor;       // 厂商信息
     QString model;        // 设备型号
     QString devicePath;   // 设备路径
+
+signals:
+    void updateResultTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新结果文本信号
+    void updateLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 更新结日志文本信号
+    void appendLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 日志文本信号
+    void updateStatusTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新状态文本信号
+    void updateSNTextSignal();
 };
 
 class Detection : public QObject
@@ -40,25 +44,31 @@ public:
     explicit Detection(CameraThread *camerathread, QObject *parent = nullptr); 
     ~Detection();
 
-    void startDetection(const QString &sn, const QString &vendor, const QString &model, const QString &devicePath);
-    void autoStartDetection(const QString &sn, const QString &vendor, const QString &model, const QString &devicePath);
+    void startDetection();
+    void autoStartDetection();
     void stopAutoDetection();
 
+    CameraThread *cameraThread;  // 摄像头线程
+    QString sn;           // 设备序列号
+    QString vendor;       // 厂商信息
+    QString model;        // 设备型号
+    QString devicePath;   // 设备路径
+
 signals:
-    void updateResultTextSignal(const QString &text);   // 更新结果文本
-    void appendLogTextSignal(const QString &text);      // 日志输出
-    void updateStatusTextSignal(const QString &text);   // 更新状态文本
+    void updateResultTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新结果文本
+    void updateLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 更新结日志文本信号
+    void appendLogTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);      // 日志输出
+    void updateStatusTextSignal(const QString &text, const QColor &color = Qt::black, int fontSize = 12);   // 更新状态文本
+    void updateSNTextSignal();
 
 private:
     DetectionWorker *worker; // 后台线程对象
 
     std::atomic<bool> autoDetectState;  // 自动检测状态
     std::thread autoDetectThread;       // 自动检测线程
-    void _autoDetectTask(const QString &sn, const QString &vendor, const QString &model, const QString &devicePath);  // 自动检测任务
+    void _autoDetectTask();  // 自动检测任务
 
     void cleanUpAutoDetectThread(); // 用于清理自动检测线程
-
-    CameraThread *cameraThread;  // 摄像头线程
 };
 
 #endif // DETECTION_H

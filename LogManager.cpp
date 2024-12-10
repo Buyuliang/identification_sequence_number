@@ -28,9 +28,13 @@ bool LogManager::downloadFile(const QString &ossPath, const QString &localFilePa
 bool LogManager::executeCommand(const QString &command)
 {
     QProcess process;
+    
+    // 先拆分命令和参数
+    QStringList arguments = command.split(" ");
+    QString program = arguments.takeFirst();  // 第一个元素是程序名
 
-    // 启动外部进程执行命令
-    process.start(command);
+    // 启动进程
+    process.start(program, arguments);
     process.waitForFinished();  // 等待命令执行完毕
 
     if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0) {

@@ -18,6 +18,7 @@ CameraThread::~CameraThread()
 void CameraThread::run()
 {
     // 使用设备路径来初始化摄像头
+    qDebug() << "CameraThread::run" << devicePath;
     cv::VideoCapture cap(devicePath.toStdString());  // 使用设备路径来打开摄像头
     if (!cap.isOpened()) {
         devicePath.clear();  // 设置 devicePath 为空

@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>  // Assuming you're using OpenCV
 #include <QMutex>
 #include <QMutexLocker> 
+#include <QDebug>
 
 class CameraThread : public QThread
 {
