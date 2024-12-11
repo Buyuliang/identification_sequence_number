@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QDebug>
 #include <QFile>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -249,17 +250,6 @@ void MainWindow::updateVideoFrame(const QPixmap &pixmap)
     videoLabel->setPixmap(pixmap);
 }
 
-// void MainWindow::toggleVendorModel()
-// {
-//     if (editVendorModel->isChecked()) {
-//         vendorInput->setEnabled(true);
-//         modelInput->setEnabled(true);
-//     } else {
-//         vendorInput->setDisabled(true);
-//         modelInput->setDisabled(true);
-//     }
-// }
-
 void MainWindow::toggleVendorModel(int state)
 {
     // 如果 editVendorModel 被选中，启用 vendorInput 和 modelInput
@@ -336,6 +326,12 @@ void MainWindow::clearfile()
     QFile file("vendor_model_data.txt");
     if (file.exists()) {
         file.remove();
+    }
+
+    // 删除 pic 目录及其所有内容
+    QDir dir("pic");
+    if (dir.exists()) {
+        dir.removeRecursively();  // 递归删除 pic 目录及其中的所有文件和子目录
     }
 }
 

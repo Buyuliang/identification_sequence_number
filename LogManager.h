@@ -17,6 +17,7 @@ public:
 
     bool uploadFile(const QString &localFilePath, const QString &ossPath);
     bool downloadFile(const QString &ossPath, const QString &localFilePath);
+    bool appendFile(const QString &localFilePath, const QString &ossPath);
 
 private:
     bool executeCommand(const QString &command);

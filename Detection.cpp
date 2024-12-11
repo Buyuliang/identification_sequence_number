@@ -1,4 +1,5 @@
 #include "Detection.h"
+#include "UplodMes.h"
 #include <iostream>
 #include <chrono>
 #include <QDateTime>
@@ -86,7 +87,7 @@ void DetectionWorker::run()
     QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
     QString imagePath;
     cv::Mat image;
-    bool downloadSuccess, uploadSuccess, detectResult;
+    bool downloadSuccess, uploadSuccess, detectResult, appendSuccess, uploadmes;
     QString results;  // 存储符合条件的数据
 
     // 设置环境变量 LD_LIBRARY_PATH
@@ -105,9 +106,27 @@ void DetectionWorker::run()
     QFile file;
     QDir dir;
 
-    // SN vendor model 规则确认
-    if (sn.isEmpty() || sn.length() != 9) {
-        emit appendLogTextSignal("sn is NULL or not 9 characters long!");
+   // 配置文件路径
+    QString configFile = "config.txt";
+
+    // 配置键值对
+    QMap<QString, QString> configMap;
+
+    // 读取配置文件
+    if (!readConfig(configFile, configMap)) {
+        qCritical() << "Failed to read configuration.";
+        goto failout;
+    }
+
+    // 打印读取到的配置
+    qDebug() << "Config values:";
+    for (const auto &key : configMap.keys()) {
+        qDebug() << key << ":" << configMap[key];
+    }
+
+    // 检查 sn 是否满足规则：12个字符且前3个字符是 "156"
+    if (sn.length() != 12 || !sn.startsWith("156")) {
+        emit appendLogTextSignal("Invalid SN. It must be 12 characters long and start with '156'. Given SN");
         goto failout;
     }
     if (vendor.isEmpty()) {
@@ -171,14 +190,14 @@ void DetectionWorker::run()
     qDebug() << "Output:" << output;
     qDebug() << "Error Output:" << errorOutput;
 
-    // 从 OSS 下载文件
-    downloadSuccess = logManager.downloadFile("oss://az05/serial_number/results.csv", "results.csv");
-    if (downloadSuccess) {
-        emit appendLogTextSignal("File downloaded successfully!");
-    } else {
-        emit appendLogTextSignal("File download failed!");
-        goto failout;
-    }
+    // // 从 OSS 下载文件
+    // downloadSuccess = logManager.downloadFile("oss://az05/serial_number/results.csv", "results.csv");
+    // if (downloadSuccess) {
+    //     emit appendLogTextSignal("File downloaded successfully!");
+    // } else {
+    //     emit appendLogTextSignal("File download failed!");
+    //     goto failout;
+    // }
     detectResult = false;
     if (file.exists()) {
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -207,22 +226,38 @@ void DetectionWorker::run()
         goto failout;
     }
     if (detectResult) {
-        QFile resultfile("results.csv");
-        if (resultfile.exists()) {
-            if (resultfile.open(QIODevice::Append | QIODevice::Text)) {
-                QTextStream out(&resultfile);
-                out << results << "\n";  // 将每行结果添加到文件中
-                resultfile.close();
-            }
-        } else {
-            qDebug() << "resultfile write failed";
+        // QFile resultfile("results.csv");
+        // if (resultfile.exists()) {
+        //     if (resultfile.open(QIODevice::Append | QIODevice::Text)) {
+        //         QTextStream out(&resultfile);
+        //         out << results << "\n";  // 将每行结果添加到文件中
+        //         resultfile.close();
+        //     }
+        // } else {
+        //     qDebug() << "resultfile write failed";
+        //     resultfile.close();
+        //     goto failout;
+        // }
+        QFile resultfile(configMap.value("log_file"));
+        if (resultfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&resultfile);
+            out << results << "\n";  // 写入新的内容，覆盖原有内容
             resultfile.close();
+        } else {
+            qDebug() << "Failed to open or create resultfile for writing";
             goto failout;
         }
+
         qDebug() << "检测成功上传日志";
         // 上传文件到 OSS
-        uploadSuccess = logManager.uploadFile("results.csv", "oss://az05/serial_number/results.csv");
-        if (uploadSuccess) {
+        // uploadSuccess = logManager.uploadFile("results.csv", "oss://az05/serial_number/results.csv");
+        // 追加文件到 OSS
+        appendSuccess = logManager.appendFile(configMap.value("log_file"), configMap.value("oss_path"));
+
+        // 上传日志到 MES
+        uploadmes = uploadLogToMes(sn, timestamp, appendSuccess, results, configMap);
+
+        if (appendSuccess && uploadmes) {
             QString vendorModelKey = vendor + model;  // 拼接 vendor + model
             loadVendorModelData();
             // 更新统计 map
@@ -230,10 +265,18 @@ void DetectionWorker::run()
             saveVendorModelData();
             // 每次更新状态文本
             updateStatusWithVendorModelCount();
-            emit appendLogTextSignal("File uploaded successfully!");
-            goto passout;
         } else {
-            emit appendLogTextSignal("File upload failed!");
+            if (uploadmes) {
+                emit appendLogTextSignal("mes uploaded successfully!", Qt::green, 14);
+            } else {
+                emit appendLogTextSignal("mes upload failed!",Qt::red, 14);
+            }
+
+            if (appendSuccess) {
+                emit appendLogTextSignal("File uploaded successfully!");
+            } else {
+                emit appendLogTextSignal("File upload failed!");
+            }
             goto failout;
         }
     }

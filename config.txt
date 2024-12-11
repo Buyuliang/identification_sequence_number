@@ -1,0 +1,7 @@
+token=your_api_token
+stn=station_name
+wi=work_instruction
+url=http://it.rayson.com:8090/api/station/updateAndBind
+
+oss_path=oss://az05/serial_number/results.csv
+log_file=results.txt
