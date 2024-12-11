@@ -64,7 +64,7 @@ bool uploadLogToMes(const QString &sn, const QString &time, const bool resultRet
 
     QUrl url(configMap.value("url"));
     QNetworkRequest request(url);
-    // request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
     QUrlQuery postData;
     postData.addQueryItem("pass", QString::number(resultRet ? 1 : 0));

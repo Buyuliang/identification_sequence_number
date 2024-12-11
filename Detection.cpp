@@ -11,19 +11,19 @@
 #include <QFile>
 #include <QDir>
 
-DetectionWorker::DetectionWorker(CameraThread *cameraThread, QString sn, QString vendor, QString model)
-    : cameraThread(cameraThread), sn(sn), vendor(vendor), model(model)
+Detection::Detection(CameraThread *camerathread, QObject *parent)  // No default argument here
+    : QObject(parent), autoDetectState(false), cameraThread(camerathread)
 {
 
 }
 
-cv::Mat DetectionWorker::getCurrentFrame()
+cv::Mat Detection::getCurrentFrame()
 {
     // 获取当前摄像头帧
     return cameraThread->captureFrame();
 }
 
-void DetectionWorker::loadVendorModelData()
+void Detection::loadVendorModelData()
 {
     QFile file("vendor_model_data.txt");
 
@@ -52,7 +52,7 @@ void DetectionWorker::loadVendorModelData()
 }
 
 // 保存统计数据到文件
-void DetectionWorker::saveVendorModelData()
+void Detection::saveVendorModelData()
 {
     QFile file("vendor_model_data.txt");
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -64,7 +64,7 @@ void DetectionWorker::saveVendorModelData()
     }
 }
 
-void DetectionWorker::updateStatusWithVendorModelCount()
+void Detection::updateStatusWithVendorModelCount()
 {
     QString statusText;
 
@@ -77,252 +77,134 @@ void DetectionWorker::updateStatusWithVendorModelCount()
     emit updateStatusTextSignal(statusText, Qt::black, 12);
 }
 
-void DetectionWorker::run()
-{
+void Detection::handleError(const QString& message) {
+    emit appendLogTextSignal(message);
+    emit updateResultTextSignal("FAILL", Qt::red, 48);
+    emit clearSNInputSignal();
+}
+
+void Detection::run() {
     emit updateLogTextSignal("");
     emit updateResultTextSignal("");
-    qDebug() << "DetectionWorker sn:" << sn << "vendor:" << vendor << "model:" << model;
+
     LogManager logManager;
-    // 获取当前时间戳作为文件名
     QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
     QString imagePath;
     cv::Mat image;
-    bool downloadSuccess, uploadSuccess, detectResult, appendSuccess, uploadmes;
-    QString results;  // 存储符合条件的数据
+    QString ocrFilePath = "text.txt";
+    QString configFile = "config.txt";
+    QFile ocrFile;
+    QDir dir;
+    QMap<QString, QString> configMap;
+    QProcess process;
+    QStringList arguments;
+    QString results;
+    bool detectResult = false;
 
     // 设置环境变量 LD_LIBRARY_PATH
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("LD_LIBRARY_PATH", "./lib");  // 修改为你的 lib 路径
-
-    // 创建 QProcess 对象
-    QProcess process;
-    QByteArray output;
-    QByteArray errorOutput;
-    // 设置命令和参数
-    QStringList arguments;
-
-    // 显示 OCR 结果
-    QString filePath = "text.txt";  // 文件路径
-    QFile file;
-    QDir dir;
-
-   // 配置文件路径
-    QString configFile = "config.txt";
-
-    // 配置键值对
-    QMap<QString, QString> configMap;
+    env.insert("LD_LIBRARY_PATH", "./lib");
 
     // 读取配置文件
     if (!readConfig(configFile, configMap)) {
-        qCritical() << "Failed to read configuration.";
-        goto failout;
+        emit appendLogTextSignal("Failed to read configuration.");
+        return;
     }
 
-    // 打印读取到的配置
-    qDebug() << "Config values:";
+    // 打印配置文件内容
     for (const auto &key : configMap.keys()) {
         qDebug() << key << ":" << configMap[key];
     }
 
-    // 检查 sn 是否满足规则：12个字符且前3个字符是 "156"
+    // 检查 SN 和其他输入参数
     if (sn.length() != 12 || !sn.startsWith("156")) {
-        emit appendLogTextSignal("Invalid SN. It must be 12 characters long and start with '156'. Given SN");
-        goto failout;
+        emit appendLogTextSignal("Invalid SN. Must be 12 characters and start with '156'.");
+        return;
     }
-    if (vendor.isEmpty()) {
-        emit appendLogTextSignal("vendor is NULL!");
-        goto failout;
-    }
-    if (model.isEmpty()) {
-        emit appendLogTextSignal("model is NULL!");
-        goto failout;
+    if (vendor.isEmpty() || model.isEmpty()) {
+        emit appendLogTextSignal(vendor.isEmpty() ? "Vendor is NULL!" : "Model is NULL!");
+        return;
     }
 
-    // 使用 OpenCV 保存图像
+    // 保存图像
     image = getCurrentFrame();
-    if (!dir.exists("./pic")) {
-        if (!dir.mkpath("./pic")) {
-            qDebug() << "Failed to create directory 'pic'.";
-        }
+    if (!dir.exists("./pic") && !dir.mkpath("./pic")) {
+        handleError("Failed to create directory 'pic'.");
+        return;
     }
-
     imagePath = "./pic/" + sn + "_" + timestamp + ".jpg";
-    if (!image.empty()) {
-        cv::imwrite(imagePath.toStdString(), image);
-        emit appendLogTextSignal("Saved image to: " + imagePath);
-    } else {
-        emit appendLogTextSignal("Image is NULL!");
-        goto failout;
+    if (image.empty() || !cv::imwrite(imagePath.toStdString(), image)) {
+        handleError("Failed to save image!");
+        return;
+    }
+    emit appendLogTextSignal("Saved image to: " + imagePath);
+
+    // 删除旧 OCR 文件
+    ocrFile.setFileName(ocrFilePath);
+    if (ocrFile.exists() && !ocrFile.remove()) {
+        qDebug() << "Failed to remove existing OCR file: " << ocrFile.errorString();
     }
 
-    file.setFileName(filePath);
-    if (file.exists()) {
-        if (file.remove()) {
-            qDebug() << "File removed successfully.";
-        } else {
-            qDebug() << "Failed to remove file. Error:" << file.errorString();
-        }
-    } else {
-        qDebug() << "File does not exist.";
-    }
-
-    // 设置 QProcess 使用的环境
+    // 启动外部进程
     process.setProcessEnvironment(env);
-    arguments << "model/ppocrv4_det.rknn" << "model/ppocrv4_rec.rknn" << imagePath;  // 修改为实际路径
-
-    // 启动程序
+    arguments << "model/ppocrv4_det.rknn" << "model/ppocrv4_rec.rknn" << imagePath;
     process.start("./rknn_ppocr_system_demo", arguments);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // 等待程序执行完成
-    if (!process.waitForStarted()) {
-        qDebug() << "Error: " << process.errorString();
+    if (!process.waitForStarted() || !process.waitForFinished()) {
+        handleError("Process error: " + process.errorString());
+        return;
     }
 
-    // 等待程序结束并输出结果
-    if (!process.waitForFinished()) {
-        qDebug() << "Error: " << process.errorString();
+    // 处理 OCR 文件
+    if (!ocrFile.exists() || !ocrFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        handleError("Failed to open OCR file.");
+        return;
     }
 
-    // 获取输出内容
-    output = process.readAllStandardOutput();
-    errorOutput = process.readAllStandardError();
-
-    qDebug() << "Output:" << output;
-    qDebug() << "Error Output:" << errorOutput;
-
-    // // 从 OSS 下载文件
-    // downloadSuccess = logManager.downloadFile("oss://az05/serial_number/results.csv", "results.csv");
-    // if (downloadSuccess) {
-    //     emit appendLogTextSignal("File downloaded successfully!");
-    // } else {
-    //     emit appendLogTextSignal("File download failed!");
-    //     goto failout;
-    // }
-    detectResult = false;
-    if (file.exists()) {
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            while (!in.atEnd()) {
-                QString line = in.readLine();
-                // 去掉行首尾的空白字符
-                QString cleanedLine = line.remove(" ");
-
-                // 检查是否以 vendor 开头并以 model 结尾
-                if (cleanedLine.startsWith(vendor) && cleanedLine.endsWith(model)) {
-                    // 保存数据到列表
-                    detectResult = true;
-                    results = sn + "," + cleanedLine + "," + vendor + "," + model + "," + timestamp;
-                    // qDebug() << "Updated results list: " << results;
-                }
-            }
-            file.close();
-        } else {
-            qDebug() << "无法打开文件:" << filePath;
-            file.close();
-            goto failout;
-        }
-    } else {
-        qDebug() << "文件不存在:" << filePath;
-        goto failout;
-    }
-    if (detectResult) {
-        // QFile resultfile("results.csv");
-        // if (resultfile.exists()) {
-        //     if (resultfile.open(QIODevice::Append | QIODevice::Text)) {
-        //         QTextStream out(&resultfile);
-        //         out << results << "\n";  // 将每行结果添加到文件中
-        //         resultfile.close();
-        //     }
-        // } else {
-        //     qDebug() << "resultfile write failed";
-        //     resultfile.close();
-        //     goto failout;
-        // }
-        QFile resultfile(configMap.value("log_file"));
-        if (resultfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&resultfile);
-            out << results << "\n";  // 写入新的内容，覆盖原有内容
-            resultfile.close();
-        } else {
-            qDebug() << "Failed to open or create resultfile for writing";
-            goto failout;
-        }
-
-        qDebug() << "检测成功上传日志";
-        // 上传文件到 OSS
-        // uploadSuccess = logManager.uploadFile("results.csv", "oss://az05/serial_number/results.csv");
-        // 追加文件到 OSS
-        appendSuccess = logManager.appendFile(configMap.value("log_file"), configMap.value("oss_path"));
-
-        // 上传日志到 MES
-        uploadmes = uploadLogToMes(sn, timestamp, appendSuccess, results, configMap);
-
-        if (appendSuccess && uploadmes) {
-            QString vendorModelKey = vendor + model;  // 拼接 vendor + model
-            loadVendorModelData();
-            // 更新统计 map
-            vendorModelMap[vendorModelKey]++;
-            saveVendorModelData();
-            // 每次更新状态文本
-            updateStatusWithVendorModelCount();
-        } else {
-            if (uploadmes) {
-                emit appendLogTextSignal("mes uploaded successfully!", Qt::green, 14);
-            } else {
-                emit appendLogTextSignal("mes upload failed!",Qt::red, 14);
-            }
-
-            if (appendSuccess) {
-                emit appendLogTextSignal("File uploaded successfully!");
-            } else {
-                emit appendLogTextSignal("File upload failed!");
-            }
-            goto failout;
+    QTextStream in(&ocrFile);
+    while (!in.atEnd()) {
+        QString line = in.readLine().remove(" ");
+        if (line.startsWith(vendor) && line.endsWith(model)) {
+            detectResult = true;
+            results = sn + "," + line + "," + vendor + "," + model + "," + timestamp;
         }
     }
+    ocrFile.close();
 
-failout:
-    emit updateResultTextSignal("FAILL", Qt::red, 24);
+    if (!detectResult) {
+        handleError("OCR detection failed.");
+        return;
+    }
+
+    // 写入结果文件
+    QFile resultFile(configMap.value("log_file"));
+    if (!resultFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        handleError("Failed to open result file for writing.");
+        return;
+    }
+    QTextStream out(&resultFile);
+    out << results << "\n";
+    resultFile.close();
+
+    // 上传日志
+    if (!logManager.appendFile(configMap.value("log_file"), configMap.value("oss_path")) ||
+        !uploadLogToMes(sn, timestamp, true, results, configMap)) {
+        handleError("Upload failed!");
+        return;
+    }
+
+    // 更新统计
+    loadVendorModelData();
+    vendorModelMap[vendor + model]++;
+    saveVendorModelData();
+    updateStatusWithVendorModelCount();
+    emit updateResultTextSignal("PASS", Qt::green, 48);
     emit clearSNInputSignal();
-    return;
-
-passout:
-    emit updateResultTextSignal("PASS", Qt::green, 24);
-    emit clearSNInputSignal();
-}
-
-Detection::Detection(CameraThread *camerathread, QObject *parent)  // No default argument here
-    : QObject(parent), worker(nullptr), autoDetectState(false), cameraThread(camerathread)
-{
-
-}
-
-Detection::~Detection()
-{
-    // 清理工作
-    if (worker) {
-        worker->wait(); // 等待线程结束
-        delete worker;
-    }
-
-    cleanUpAutoDetectThread(); // 清理自动检测线程
 }
 
 void Detection::startDetection()
 {
     updateSNTextSignal();
-    qDebug() << "更新SN:" << this->sn;
-    worker = new DetectionWorker(cameraThread, sn, vendor, model);
-    
-    // 连接信号和槽
-    connect(worker, &DetectionWorker::updateResultTextSignal, this, &Detection::updateResultTextSignal);
-    connect(worker, &DetectionWorker::appendLogTextSignal, this, &Detection::appendLogTextSignal);
-    connect(worker, &DetectionWorker::updateStatusTextSignal, this, &Detection::updateStatusTextSignal);
-    connect(worker, &DetectionWorker::updateSNTextSignal, this, &Detection::updateSNTextSignal);
-    connect(worker, &DetectionWorker::clearSNInputSignal, this, &Detection::clearSNInputSignal);
-    
-    // 启动检测线程
-    worker->start();
+    run();
 }
 
 void Detection::autoStartDetection()
@@ -341,23 +223,20 @@ void Detection::autoStartDetection()
 
 void Detection::_autoDetectTask()
 {
-    // 持续执行自动检测任务
     while (autoDetectState.load()) {
-        std::cout << "Starting detection for device: " << devicePath.toStdString() << std::endl;
 
-        // 调用 startDetection 方法进行检测
-        startDetection();
-
-        // 模拟检测间隔（可以根据需求调整）
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // 每隔500ms执行一次检测
+        // 调用检测任务
+        // startDetection();
+        updateSNTextSignal();
+        run();
+        // 添加检测间隔
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
 void Detection::stopAutoDetection()
 {
-    // 停止自动检测
-    autoDetectState.store(false);
-
+    autoDetectState.store(false); // 停止自动检测
     cleanUpAutoDetectThread(); // 清理自动检测线程
 }
 
@@ -367,4 +246,9 @@ void Detection::cleanUpAutoDetectThread()
     if (autoDetectThread.joinable()) {
         autoDetectThread.join(); // 等待自动检测线程结束
     }
+}
+
+Detection::~Detection()
+{
+    cleanUpAutoDetectThread(); // 清理自动检测线程
 }

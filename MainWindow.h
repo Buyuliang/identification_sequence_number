@@ -60,8 +60,8 @@ private:
     QMutex mutex;
 
     // Private methods to update UI
-    void updateResultText(const QString &text, const QColor &color = Qt::black, int fontSize = 24);
-    void updateLogText(const QString &text, const QColor &color = Qt::black, int fontSize = 24);
+    void updateResultText(const QString &text, const QColor &color = Qt::black, int fontSize = 36);
+    void updateLogText(const QString &text, const QColor &color = Qt::black, int fontSize = 36);
     void appendLogText(const QString &text, const QColor &color = Qt::black, int fontSize = 12);
     void updateStatusText(const QString &text, const QColor &color = Qt::black, int fontSize = 12);
     void updateVideoFrame(const QPixmap &pixmap);

@@ -267,8 +267,7 @@ void MainWindow::onAutoStartDetection()
         QString model = modelInput->text();
         QString devicePath = currentDevice;
         startButton->setDisabled(true);
-        vendorInput->setDisabled(true);
-        modelInput->setDisabled(true);
+        editVendorModel->setChecked(false);
 
         // 启动检测
         detection->autoStartDetection();
@@ -316,8 +315,7 @@ void MainWindow::onDeviceSelected(int index)
 void MainWindow::onStartDetection()
 {
     // 启动检测
-    vendorInput->setDisabled(true);
-    modelInput->setDisabled(true);
+    editVendorModel->setChecked(false);
     detection->startDetection();
 }
 
