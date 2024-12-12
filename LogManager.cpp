@@ -28,7 +28,7 @@ bool LogManager::downloadFile(const QString &ossPath, const QString &localFilePa
 bool LogManager::appendFile(const QString &localFilePath, const QString &ossPath)
 {
     // 构建下载命令
-    QString command = QString("ossutil appendfromfile -f %1 %2").arg(localFilePath, ossPath);
+    QString command = QString("ossutil appendfromfile %1 %2").arg(localFilePath, ossPath);
 
     return executeCommand(command);  // 执行命令
 }
